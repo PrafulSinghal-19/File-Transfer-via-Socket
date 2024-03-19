@@ -1,6 +1,6 @@
 import socket
 import tqdm
-import time
+import ssl
 
 # HOST AND PORT
 HOST= "127.0.0.1"
@@ -29,7 +29,6 @@ def receive_file(client: socket.socket)-> None:
     data= b''
 
     for i in range(int(file_length)):
-        time.sleep(0.001)
         msg= client.recv(1)
         if msg:
             data+= msg
@@ -37,21 +36,35 @@ def receive_file(client: socket.socket)-> None:
         else:
             raise Exception('Unable To Read File')
     
-    with open(file_name, 'wb') as f:
+    with open(f'../images/{file_name}', 'wb') as f:
         f.write(data)
 
 def start_server()-> None:
     try:
+        context= ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        
+        context.load_cert_chain(certfile= "certificate.pem", keyfile="key.pem")
+
         server= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
         server.bind((HOST, PORT))
+
         server.listen()
 
-        client, _= server.accept()
+        ssl_server= context.wrap_socket(sock= server, server_side= True)
+
+        print(f'*** SERVER STARTED ***')
+
+        client, _= ssl_server.accept()
 
         receive_file(client)
+
+        client.send('File Received'.encode('UTF-8'))
+
     except Exception as e: 
-        print(e)
+        print(f'Exception: {e}')
     finally:
+        ssl_server.close()
         server.close()     
 
 def main():

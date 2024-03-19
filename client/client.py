@@ -1,11 +1,12 @@
 import socket
+import ssl
 
 # HOST AND PORT
 HOST= "127.0.0.1"
 PORT= 9090
 
 def send_file(client: socket.socket)-> None:
-    with open('Python.png', 'rb') as f:
+    with open('../images/Python.png', 'rb') as f:
         client.send('ReceivedImage.png\n'.encode('UTF-8'))
         data= f.read()
         file_length= len(data)
@@ -14,10 +15,21 @@ def send_file(client: socket.socket)-> None:
 
 def connect_to_server()-> None:
     try:
+        context= ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        
+        context.load_verify_locations("certificate.pem")
+
         client= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
+        client= context.wrap_socket(sock= client, server_hostname=HOST) 
+
         client.connect((HOST, PORT))
+
         send_file(client=client)
-    except:
+
+        client.recv(1024)
+
+    except Exception as e:
         pass
     finally:
         client.close()
